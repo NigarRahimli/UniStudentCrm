@@ -1,0 +1,6 @@
+@StudentCrm.WebApi_HostAddress = http://localhost:5191
+
+GET {{StudentCrm.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
