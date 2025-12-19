@@ -2,20 +2,26 @@
 using Microsoft.Extensions.DependencyInjection;
 using Student.Domain.Entities;
 
-
 namespace StudentCrm.Persistence.Context
 {
     public static class StudentCrmDbContextSeed
     {
         public static async Task SeedAsync(IServiceProvider services)
         {
-            var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-            var userManager = services.GetRequiredService<UserManager<Admin>>();
+            var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+            var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
             const string adminRole = "Admin";
-            if (!await roleManager.RoleExistsAsync(adminRole))
-                await roleManager.CreateAsync(new IdentityRole(adminRole));
 
+            // Role create
+            if (!await roleManager.RoleExistsAsync(adminRole))
+            {
+                var roleResult = await roleManager.CreateAsync(new AppRole { Name = adminRole });
+                if (!roleResult.Succeeded)
+                    throw new Exception(string.Join("; ", roleResult.Errors.Select(e => e.Description)));
+            }
+
+            // Admin user
             var adminEmail = "admin@crm.local";
             var adminUserName = "admin";
             var adminPassword = "Admin123!";
@@ -26,7 +32,7 @@ namespace StudentCrm.Persistence.Context
 
             if (adminUser == null)
             {
-                adminUser = new Admin
+                adminUser = new AppUser
                 {
                     UserName = adminUserName,
                     Email = adminEmail,
@@ -35,13 +41,18 @@ namespace StudentCrm.Persistence.Context
                     Surname = "Admin"
                 };
 
-                var result = await userManager.CreateAsync(adminUser, adminPassword);
-                if (!result.Succeeded)
-                    throw new Exception(string.Join("; ", result.Errors.Select(e => e.Description)));
+                var createResult = await userManager.CreateAsync(adminUser, adminPassword);
+                if (!createResult.Succeeded)
+                    throw new Exception(string.Join("; ", createResult.Errors.Select(e => e.Description)));
             }
 
+            // Assign role
             if (!await userManager.IsInRoleAsync(adminUser, adminRole))
-                await userManager.AddToRoleAsync(adminUser, adminRole);
+            {
+                var addRoleResult = await userManager.AddToRoleAsync(adminUser, adminRole);
+                if (!addRoleResult.Succeeded)
+                    throw new Exception(string.Join("; ", addRoleResult.Errors.Select(e => e.Description)));
+            }
         }
     }
-    }
+}

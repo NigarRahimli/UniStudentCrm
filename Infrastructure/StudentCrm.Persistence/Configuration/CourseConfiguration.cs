@@ -11,16 +11,9 @@ namespace StudentCrm.Persistence.Configuration
         {
             builder.ToTable("Courses");
 
-            builder.Property(x => x.Code)
-                .IsRequired()
-                .HasMaxLength(20);
-
-            builder.Property(x => x.Title)
-                .IsRequired()
-                .HasMaxLength(200);
-
-            builder.Property(x => x.Credit)
-                .IsRequired();
+            builder.Property(x => x.Code).IsRequired().HasMaxLength(20);
+            builder.Property(x => x.Title).IsRequired().HasMaxLength(200);
+            builder.Property(x => x.Credit).IsRequired();
 
             builder.HasIndex(x => x.Code).IsUnique();
         }

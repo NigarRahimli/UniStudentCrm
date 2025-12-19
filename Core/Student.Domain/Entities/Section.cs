@@ -9,16 +9,18 @@ namespace Student.Domain.Entities
         // Example: CS101 in Fall 2025 can have Section A (Teacher1) and Section B (Teacher2).
         // Students enroll into a Section (the real class: teacher/schedule/group), not just the Course.
 
-        public int CourseId { get; set; }
-        public Course Course { get; set; }
+        public string SectionCode { get; set; } = null!; // A, B, 01...
 
-        public int TermId { get; set; }
-        public Term Term { get; set; }
+        public Guid CourseId { get; set; }
+        public Course Course { get; set; } = null!;
 
-        public string SectionCode { get; set; } // A, B, 01
+        public Guid TermId { get; set; }
+        public Term Term { get; set; } = null!;
 
-        public int TeacherId { get; set; }
-        public  Teacher Teacher{ get; set; }
+        public Guid TeacherId { get; set; }
+        public TeacherUser Teacher { get; set; } = null!;
+
+        public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
 
     }
 }

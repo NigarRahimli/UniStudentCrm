@@ -9,8 +9,10 @@ namespace Student.Domain.Entities
 {
     public class Term:BaseEntity
     {
-        public string Name { get; set; } // 2025 Fall
+        public string Name { get; set; } = null!;
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+
+        public ICollection<Section> Sections { get; set; } = new List<Section>();
     }
 }

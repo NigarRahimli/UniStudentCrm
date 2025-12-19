@@ -15,26 +15,23 @@ namespace StudentCrm.Persistence.Configuration
         {
             builder.ToTable("Sections");
 
-            builder.Property(x => x.SectionCode)
-                .IsRequired()
-                .HasMaxLength(10);
+            builder.Property(x => x.SectionCode).IsRequired().HasMaxLength(10);
 
             builder.HasOne(x => x.Course)
-                .WithMany()                 // istəsən Course-a ICollection<Section> əlavə edib WithMany(c=>c.Sections) yazarsan
+                .WithMany(x => x.Sections)
                 .HasForeignKey(x => x.CourseId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(x => x.Term)
-                .WithMany()
+                .WithMany(x => x.Sections)
                 .HasForeignKey(x => x.TermId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(x => x.Teacher)
-                .WithMany()
+                .WithMany(x => x.Sections)
                 .HasForeignKey(x => x.TeacherId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // eyni Course+Term daxilində SectionCode təkrarlanmasın (A,B,...)
             builder.HasIndex(x => new { x.CourseId, x.TermId, x.SectionCode }).IsUnique();
         }
     }
