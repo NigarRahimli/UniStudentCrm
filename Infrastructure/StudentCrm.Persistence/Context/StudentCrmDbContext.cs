@@ -11,9 +11,11 @@ namespace StudentCrm.Persistence.Context
         {
         }
         public DbSet<AppUser> Admins { get; set; }
+        public DbSet<CoordinatorUser> Coordinators { get; set; }
         public DbSet<Course> Courses { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Section> Sections { get; set; }
+        public DbSet<StudentUser> Students { get; set; }
         public DbSet<TeacherUser> Teachers { get; set; }
         public DbSet<Term> Terms { get; set; }
         public DbSet<StudentUser> UniStudents { get; set; }

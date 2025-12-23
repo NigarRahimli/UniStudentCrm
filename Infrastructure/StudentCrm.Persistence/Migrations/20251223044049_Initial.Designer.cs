@@ -12,7 +12,7 @@ using StudentCrm.Persistence.Context;
 namespace StudentCrm.Persistence.Migrations
 {
     [DbContext(typeof(StudentCrmDbContext))]
-    [Migration("20251219063612_Initial")]
+    [Migration("20251223044049_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
