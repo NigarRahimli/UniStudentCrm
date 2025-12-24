@@ -19,6 +19,8 @@ namespace StudentCrm.WebApi.Controllers
             _logger = logger;
         }
 
+        [Authorize(Roles = "Admin,Coordinator,Teacher")]
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -39,6 +41,7 @@ namespace StudentCrm.WebApi.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin,Coordinator,Teacher")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
@@ -128,27 +131,6 @@ namespace StudentCrm.WebApi.Controllers
             }
         }
 
-        [HttpPost("{id}")]
-        public async Task<IActionResult> AddLogin(string id, AddStudentLoginDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(new { StatusCode = 400, Error = "Yanlış daxil edilmə məlumatı!" });
 
-            try
-            {
-                await _studentService.AddLoginAsync(id, dto);
-                return Ok(new { StatusCode = 200, Message = "Student login uğurla əlavə edildi!" });
-            }
-            catch (GlobalAppException ex)
-            {
-                _logger.LogError(ex, "Student login əlavə edilərkən xəta baş verdi!");
-                return BadRequest(new { StatusCode = 400, Error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Student login əlavə edilərkən gözlənilməz xəta baş verdi!");
-                return StatusCode(500, new { StatusCode = 500, Error = "Gözlənilməz xəta baş verdi!" });
-            }
-        }
     }
 }

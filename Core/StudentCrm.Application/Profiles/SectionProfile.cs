@@ -15,10 +15,13 @@ namespace StudentCrm.Application.Profiles
 
             // Update: DTO -> Entity
             CreateMap<UpdateSectionDto, Section>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.Enrollments, opt => opt.Ignore()); // handled by Enrollment service
 
             // Entity -> DTO (for GET)
             CreateMap<Section, SectionDto>();
+            CreateMap<Section, SectionShortDto>();
+            CreateMap<Section, SectionTeacherDto>();
         }
     }
 }

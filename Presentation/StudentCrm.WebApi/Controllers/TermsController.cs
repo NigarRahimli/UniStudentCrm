@@ -6,7 +6,7 @@ using StudentCrm.Application.GlobalAppException;
 
 namespace StudentCrm.WebApi.Controllers
 {
-    [Route("api/terms")]
+    [Route("api/[controller]")]
     [ApiController]
     public class TermsController : ControllerBase
     {
@@ -62,7 +62,7 @@ namespace StudentCrm.WebApi.Controllers
         }
 
         // POST api/terms
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Coordinator")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateTermDto dto)
         {
@@ -87,8 +87,8 @@ namespace StudentCrm.WebApi.Controllers
         }
 
         // PUT api/terms/{id}
-        [Authorize(Roles = "Admin")]
-        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Coordinator")]
+        [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdateTermDto dto)
         {
             if (!ModelState.IsValid)
@@ -114,7 +114,7 @@ namespace StudentCrm.WebApi.Controllers
         }
 
         // DELETE api/terms/{id}
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Coordinator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete([FromRoute] string id)
         {

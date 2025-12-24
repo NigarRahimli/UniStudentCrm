@@ -15,8 +15,5 @@ namespace StudentCrm.Application.Abstract.Services
         Task UpdateAsync(UpdateStudentDto dto);
         Task DeleteAsync(string id);
 
-
-        // login creation for student later
-        Task AddLoginAsync(string id, AddStudentLoginDto dto);
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Student.Domain.Entities;
+using Student.Domain.HelperEntities;
 using StudentCrm.Application.Profiles;
 using StudentCrm.Persistence;
 using StudentCrm.Persistence.Context;
@@ -89,7 +90,8 @@ builder.Services.AddSwaggerGen(opt =>
                   }
               });
 });
-
+builder.Services.Configure<MailSettings>(
+    builder.Configuration.GetSection("MailSettings"));
 var app = builder.Build();
 
 // ? Seed AFTER Build
@@ -98,6 +100,7 @@ using (var scope = app.Services.CreateScope())
     await StudentCrmDbContextSeed.SeedAsync(scope.ServiceProvider);
 }
 
+app.UseMiddleware<StudentCrm.Application.GlobalAppException.GlobalExceptionMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

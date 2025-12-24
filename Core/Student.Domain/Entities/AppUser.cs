@@ -5,9 +5,14 @@ namespace Student.Domain.Entities
 {
     public class AppUser : IdentityUser<Guid>
     {
-        public string Name { get; set; }
-        public string Surname { get; set; }
+      
+
+        // Temporary password flow (sənin istədiyin məntiq)
+        public bool MustChangePassword { get; set; } = true;
+        public DateTime? TemporaryPasswordIssuedAt { get; set; }
+
+
         //public string Phone { get; set; }
-       // public string Email { get; set; }
+        // public string Email { get; set; }
     }
 }

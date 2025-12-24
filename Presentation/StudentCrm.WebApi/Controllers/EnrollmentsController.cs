@@ -18,7 +18,7 @@ namespace StudentCrm.WebApi.Controllers
             _enrollmentService = enrollmentService;
             _logger = logger;
         }
-
+        [Authorize(Roles = "Admin,Coordinator,Teacher")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -38,9 +38,9 @@ namespace StudentCrm.WebApi.Controllers
                 return StatusCode(500, new { StatusCode = 500, Error = "Gözlənilməz xəta baş verdi!" });
             }
         }
-
+        [Authorize(Roles = "Admin,Coordinator,Teacher")]
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById([FromBody] string id)
+        public async Task<IActionResult> GetById( string id)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace StudentCrm.WebApi.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Coordinator")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateEnrollmentDto dto)
         {
@@ -83,7 +83,7 @@ namespace StudentCrm.WebApi.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Coordinates")]
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdateEnrollmentDto dto)
         {
@@ -109,7 +109,7 @@ namespace StudentCrm.WebApi.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete([FromBody] string id)
+        public async Task<IActionResult> Delete(string id)
         {
             try
             {

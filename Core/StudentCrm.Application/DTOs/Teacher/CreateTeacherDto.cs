@@ -13,6 +13,6 @@ namespace StudentCrm.Application.DTOs.Teacher
         public string FullName { get; set; } = null!;
         public string? Email { get; set; }
 
-        public List<string> SectionIds { get; set; } 
+        public List<string>? SectionIds { get; set; } 
     }
 }

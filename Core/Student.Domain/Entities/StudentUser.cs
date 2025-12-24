@@ -12,10 +12,12 @@ namespace Student.Domain.Entities
         public string? Email { get; set; }
 
         // Hamı login olacaqsa -> Guid AppUserId (required) et
-        public Guid? AppUserId { get; set; }
-        public AppUser? AppUser { get; set; }
+        public Guid AppUserId { get; set; }
+        public AppUser AppUser { get; set; }
 
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
+        public string Major { get; set; }
+        public double? GPA { get; set; }
 
     }
 

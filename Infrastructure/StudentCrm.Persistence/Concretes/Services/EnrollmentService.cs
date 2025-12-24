@@ -1,170 +1,246 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Student.Domain.Entities;
+using StudentCrm.Application.Abstract.Repositories.Enrollments;
 using StudentCrm.Application.Abstract.Services;
 using StudentCrm.Application.DTOs.Enrollment;
 using StudentCrm.Application.GlobalAppException;
-using Student.Domain.Entities;
-using StudentCrm.Persistence.Context;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace StudentCrm.Persistence.Concretes.Services
 {
     public class EnrollmentService : IEnrollmentService
     {
-        private readonly StudentCrmDbContext _db;
+        private readonly IEnrollmentReadRepository _enrollmentReadRepo;
+        private readonly IEnrollmentWriteRepository _enrollmentWriteRepo;
+        private readonly IStudentService _studentService;
+        private readonly ISectionService _sectionService;
         private readonly IMapper _mapper;
 
-        public EnrollmentService(StudentCrmDbContext db, IMapper mapper)
+        private const int LetterGradeMaxLength = 2;
+
+        public EnrollmentService(
+            IEnrollmentReadRepository enrollmentReadRepo,
+            IEnrollmentWriteRepository enrollmentWriteRepo,
+            IStudentService studentService,
+            ISectionService sectionService,
+            IMapper mapper)
         {
-            _db = db;
+            _enrollmentReadRepo = enrollmentReadRepo;
+            _enrollmentWriteRepo = enrollmentWriteRepo;
+            _studentService = studentService;
+            _sectionService = sectionService;
             _mapper = mapper;
         }
 
         public async Task<List<EnrollmentDto>> GetAllAsync()
         {
-            var list = await _db.Enrollments
-                .Include(e => e.Student)
-                .Include(e => e.Section)
-                .ToListAsync();
+            var enrollments = await _enrollmentReadRepo.GetAllAsync(
+                e => !EF.Property<bool>(e, "IsDeleted"),
+                include: q => q
+                    .Include(e => e.Student)
+                        .ThenInclude(s => s.AppUser) // so Student email can map from AppUser if needed
+                    .Include(e => e.Section)
+                        .ThenInclude(s => s.Course)
+                    .Include(e => e.Section)
+                        .ThenInclude(s => s.Term)
+                    .Include(e => e.Section)
+                        .ThenInclude(s => s.Teacher),
+                enableTracking: false
+            );
 
-            return _mapper.Map<List<EnrollmentDto>>(list);
+            return _mapper.Map<List<EnrollmentDto>>(enrollments.ToList());
         }
 
         public async Task<EnrollmentDto> GetByIdAsync(string id)
         {
-            if (!Guid.TryParse(id, out var enrollmentId))
+            if (string.IsNullOrWhiteSpace(id) || !Guid.TryParse(id, out var enrollmentId))
                 throw new GlobalAppException("Invalid Enrollment ID!");
 
-            var entity = await _db.Enrollments
-                .Include(e => e.Student)
-                .Include(e => e.Section)
-                .FirstOrDefaultAsync(e => e.Id == enrollmentId);
+            var enrollment = await _enrollmentReadRepo.GetAsync(
+                e => e.Id == enrollmentId && !EF.Property<bool>(e, "IsDeleted"),
+                include: q => q
+                    .Include(e => e.Student)
+                        .ThenInclude(s => s.AppUser)
+                    .Include(e => e.Section)
+                        .ThenInclude(s => s.Course)
+                    .Include(e => e.Section)
+                        .ThenInclude(s => s.Term)
+                    .Include(e => e.Section)
+                        .ThenInclude(s => s.Teacher),
+                enableTracking: false
+            );
 
-            if (entity == null)
+            if (enrollment == null)
                 throw new GlobalAppException("Enrollment not found!");
 
-            return _mapper.Map<EnrollmentDto>(entity);
+            return _mapper.Map<EnrollmentDto>(enrollment);
         }
 
         public async Task CreateAsync(CreateEnrollmentDto dto)
         {
             if (dto == null)
-                throw new GlobalAppException("Submitted data is null!");
+                throw new GlobalAppException("Göndərilən məlumat boşdur!");
 
             if (string.IsNullOrWhiteSpace(dto.StudentId) || !Guid.TryParse(dto.StudentId, out var studentId))
-                throw new GlobalAppException("Student must be specified!");
+                throw new GlobalAppException("Yanlış Student ID!");
 
             if (string.IsNullOrWhiteSpace(dto.SectionId) || !Guid.TryParse(dto.SectionId, out var sectionId))
-                throw new GlobalAppException("Section must be specified!");
+                throw new GlobalAppException("Yanlış Section ID!");
 
-            var student = await _db.Students.FindAsync(studentId)
-                ?? throw new GlobalAppException("Student not found!");
+            if (dto.TotalGrade is not null && (dto.TotalGrade < 0 || dto.TotalGrade > 100))
+                throw new GlobalAppException("TotalGrade 0-100 aralığında olmalıdır!");
 
-            var section = await _db.Sections.FindAsync(sectionId)
-                ?? throw new GlobalAppException("Section not found!");
+            if (!string.IsNullOrWhiteSpace(dto.LetterGrade) && dto.LetterGrade.Trim().Length > 2)
+                throw new GlobalAppException("LetterGrade maksimum 2 simvol ola bilər!");
 
-            bool exists = await _db.Enrollments
-                .AnyAsync(e => e.StudentId == studentId && e.SectionId == sectionId);
+            // validate via services (your architecture)
+            await _studentService.GetByIdAsync(dto.StudentId);
+            await _sectionService.GetByIdAsync(dto.SectionId);
 
-            if (exists)
-                throw new GlobalAppException("This student is already enrolled in this section!");
+            // 1) ACTIVE duplicate?
+            var active = await _enrollmentReadRepo.GetAsync(e =>
+                e.StudentId == studentId &&
+                e.SectionId == sectionId &&
+                EF.Property<bool>(e, "IsDeleted") == false);
 
+            if (active != null)
+                throw new GlobalAppException("Bu tələbə artıq bu section-a enroll olunub!");
+
+            // 2) SOFT-DELETED duplicate? -> restore
+            var deleted = await _enrollmentReadRepo.GetAsync(e =>
+                e.StudentId == studentId &&
+                e.SectionId == sectionId &&
+                EF.Property<bool>(e, "IsDeleted") == true,
+                enableTracking: true);
+
+            if (deleted != null)
+            {
+                // restore: ONLY set IsDeleted=false (DON'T set DeletedDate=null because your DeletedDate is required)
+                var db = _enrollmentWriteRepo.GetDbContext();
+                db.Attach(deleted);
+
+                var entry = db.Entry(deleted);
+                entry.Property("IsDeleted").CurrentValue = false;
+                entry.Property("IsDeleted").IsModified = true;
+
+                // DO NOT do DeletedDate = null (it is required in your model/db)
+
+                deleted.TotalGrade = dto.TotalGrade;
+                deleted.LetterGrade = string.IsNullOrWhiteSpace(dto.LetterGrade) ? null : dto.LetterGrade.Trim();
+
+                await _enrollmentWriteRepo.UpdateAsync(deleted);
+                await _enrollmentWriteRepo.CommitAsync();
+                return;
+            }
+
+            // 3) create new
             var enrollment = new Enrollment
             {
                 StudentId = studentId,
                 SectionId = sectionId,
                 TotalGrade = dto.TotalGrade,
-                LetterGrade = dto.LetterGrade
+                LetterGrade = string.IsNullOrWhiteSpace(dto.LetterGrade) ? null : dto.LetterGrade.Trim()
             };
 
-            _db.Enrollments.Add(enrollment);
-            await _db.SaveChangesAsync();
+            await _enrollmentWriteRepo.AddAsync(enrollment);
+            await _enrollmentWriteRepo.CommitAsync();
         }
 
         public async Task UpdateAsync(UpdateEnrollmentDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.Id) || !Guid.TryParse(dto.Id, out var enrollmentId))
-                throw new GlobalAppException("Invalid Enrollment data!");
+            if (dto == null)
+                throw new GlobalAppException("Göndərilən məlumat boşdur!");
 
-            var entity = await _db.Enrollments
-                .FirstOrDefaultAsync(e => e.Id == enrollmentId);
+            if (string.IsNullOrWhiteSpace(dto.Id) || !Guid.TryParse(dto.Id, out var enrollmentId))
+                throw new GlobalAppException("Yanlış Enrollment ID!");
 
-            if (entity == null)
-                throw new GlobalAppException("Enrollment not found!");
+            var enrollment = await _enrollmentReadRepo.GetAsync(
+                e => e.Id == enrollmentId && !EF.Property<bool>(e, "IsDeleted"),
+                enableTracking: true
+            );
 
-            // StudentId update (optional)
-            if (!string.IsNullOrWhiteSpace(dto.StudentId))
+            if (enrollment == null)
+                throw new GlobalAppException("Enrollment tapılmadı!");
+
+            // keep old values
+            var oldStudentId = enrollment.StudentId;
+            var oldSectionId = enrollment.SectionId;
+            var oldTotalGrade = enrollment.TotalGrade;
+            var oldLetterGrade = enrollment.LetterGrade;
+
+            if (dto.StudentId != null)
             {
-                if (!Guid.TryParse(dto.StudentId, out var newStudentId))
-                    throw new GlobalAppException("Invalid Student ID!");
+                if (string.IsNullOrWhiteSpace(dto.StudentId) || !Guid.TryParse(dto.StudentId, out var newStudentId))
+                    throw new GlobalAppException("Yanlış Student ID!");
 
-                if (newStudentId != entity.StudentId)
-                {
-                    var student = await _db.Students.FindAsync(newStudentId);
-                    if (student == null)
-                        throw new GlobalAppException("Student not found!");
-
-                    // duplicate check with new student + current section
-                    bool exists = await _db.Enrollments.AnyAsync(e =>
-                        e.Id != enrollmentId &&
-                        e.StudentId == newStudentId &&
-                        e.SectionId == entity.SectionId);
-
-                    if (exists)
-                        throw new GlobalAppException("This student is already enrolled in this section!");
-
-                    entity.StudentId = newStudentId;
-                }
+                await _studentService.GetByIdAsync(dto.StudentId);
+                enrollment.StudentId = newStudentId;
             }
+            else enrollment.StudentId = oldStudentId;
 
-            // SectionId update (optional)
-            if (!string.IsNullOrWhiteSpace(dto.SectionId))
+            if (dto.SectionId != null)
             {
-                if (!Guid.TryParse(dto.SectionId, out var newSectionId))
-                    throw new GlobalAppException("Invalid Section ID!");
+                if (string.IsNullOrWhiteSpace(dto.SectionId) || !Guid.TryParse(dto.SectionId, out var newSectionId))
+                    throw new GlobalAppException("Yanlış Section ID!");
 
-                if (newSectionId != entity.SectionId)
-                {
-                    var section = await _db.Sections.FindAsync(newSectionId);
-                    if (section == null)
-                        throw new GlobalAppException("Section not found!");
-
-                    // duplicate check with current student + new section
-                    bool exists = await _db.Enrollments.AnyAsync(e =>
-                        e.Id != enrollmentId &&
-                        e.StudentId == entity.StudentId &&
-                        e.SectionId == newSectionId);
-
-                    if (exists)
-                        throw new GlobalAppException("This student is already enrolled in this section!");
-
-                    entity.SectionId = newSectionId;
-                }
+                await _sectionService.GetByIdAsync(dto.SectionId);
+                enrollment.SectionId = newSectionId;
             }
+            else enrollment.SectionId = oldSectionId;
 
-            // Grades
-            if (dto.TotalGrade.HasValue)
-                entity.TotalGrade = dto.TotalGrade.Value;
+            if (dto.TotalGrade != null)
+            {
+                if (dto.TotalGrade < 0 || dto.TotalGrade > 100)
+                    throw new GlobalAppException("TotalGrade 0-100 aralığında olmalıdır!");
 
-            if (dto.LetterGrade != null) // allow clearing by sending null? if you want
-                entity.LetterGrade = string.IsNullOrWhiteSpace(dto.LetterGrade) ? null : dto.LetterGrade;
+                enrollment.TotalGrade = dto.TotalGrade;
+            }
+            else enrollment.TotalGrade = oldTotalGrade;
 
-            await _db.SaveChangesAsync();
+            if (dto.LetterGrade != null)
+            {
+                var trimmed = dto.LetterGrade.Trim();
+
+                if (!string.IsNullOrWhiteSpace(trimmed) && trimmed.Length > LetterGradeMaxLength)
+                    throw new GlobalAppException($"LetterGrade maksimum {LetterGradeMaxLength} simvol ola bilər!");
+
+                enrollment.LetterGrade = string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+            }
+            else enrollment.LetterGrade = oldLetterGrade;
+
+            // prevent duplicates after update (active ones)
+            var dupActive = await _enrollmentReadRepo.GetAsync(e =>
+                e.Id != enrollmentId &&
+                e.StudentId == enrollment.StudentId &&
+                e.SectionId == enrollment.SectionId &&
+                !EF.Property<bool>(e, "IsDeleted"));
+
+            if (dupActive != null)
+                throw new GlobalAppException("Bu tələbə artıq bu section-a enroll olunub!");
+
+            await _enrollmentWriteRepo.UpdateAsync(enrollment);
+            await _enrollmentWriteRepo.CommitAsync();
         }
 
         public async Task DeleteAsync(string id)
         {
-            if (!Guid.TryParse(id, out var enrollmentId))
-                throw new GlobalAppException("Invalid Enrollment ID!");
+            if (string.IsNullOrWhiteSpace(id) || !Guid.TryParse(id, out var enrollmentId))
+                throw new GlobalAppException("Yanlış Enrollment ID!");
 
-            var entity = await _db.Enrollments.FindAsync(enrollmentId);
-            if (entity == null)
-                throw new GlobalAppException("Enrollment not found!");
+            var enrollment = await _enrollmentReadRepo.GetAsync(
+                e => e.Id == enrollmentId && !EF.Property<bool>(e, "IsDeleted"),
+                enableTracking: true
+            );
 
-            _db.Enrollments.Remove(entity);
-            await _db.SaveChangesAsync();
+            if (enrollment == null)
+                throw new GlobalAppException("Enrollment tapılmadı!");
+
+            await _enrollmentWriteRepo.SoftDeleteAsync(enrollment);
+            await _enrollmentWriteRepo.CommitAsync();
         }
     }
 }

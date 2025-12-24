@@ -59,7 +59,7 @@ namespace StudentCrm.WebApi.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Coordinator")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateCourseDto dto)
         {
@@ -83,7 +83,7 @@ namespace StudentCrm.WebApi.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Coordinator")]
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdateCourseDto dto)
         {
@@ -107,7 +107,7 @@ namespace StudentCrm.WebApi.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Coordinator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete( string id)
         {

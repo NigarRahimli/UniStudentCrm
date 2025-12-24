@@ -11,5 +11,6 @@ namespace StudentCrm.Application.DTOs.Account
         public string Token { get; set; }
         public DateTime ExpireDate { get; set; }
         public string Role { get; set; }
+        public bool MustChangePassword { get; set; }
     }
 }

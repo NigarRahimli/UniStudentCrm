@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StudentCrm.Application.Abstract.Repositories.Coordinators;
 using StudentCrm.Application.Abstract.Repositories.Courses;
 using StudentCrm.Application.Abstract.Repositories.Enrollments;
 using StudentCrm.Application.Abstract.Repositories.Sections;
@@ -7,6 +8,8 @@ using StudentCrm.Application.Abstract.Repositories.Students;
 using StudentCrm.Application.Abstract.Repositories.Teachers;
 using StudentCrm.Application.Abstract.Repositories.Terms;
 using StudentCrm.Application.Abstract.Services;
+using StudentCrm.Infrastructure.Concretes;
+using StudentCrm.Persistence.Concretes.Repositories.Coordinators;
 using StudentCrm.Persistence.Concretes.Repositories.Courses;
 using StudentCrm.Persistence.Concretes.Repositories.Enrollments;
 using StudentCrm.Persistence.Concretes.Repositories.Sections;
@@ -28,6 +31,7 @@ namespace StudentCrm.Persistence
         {
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IMailService, MailService>();
 
 
             services.AddScoped<ITeacherService, TeacherService>();
@@ -53,6 +57,13 @@ namespace StudentCrm.Persistence
             services.AddScoped<IEnrollmentService,EnrollmentService>();
             services.AddScoped<IEnrollmentReadRepository, EnrollmentReadRepository>();
             services.AddScoped<IEnrollmentWriteRepository, EnrollmentWriteRepository>();
+
+            services.AddScoped<ICoordinatorService, CoordinatorService>();  
+            services.AddScoped<ICoordinatorReadRepository, CoordinatorReadRepository>();
+            services.AddScoped<ICoordinatorWriteRepository, CoordinatorWriteRepository>();
+
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<ITokenService, TokenService>();
 
 
 

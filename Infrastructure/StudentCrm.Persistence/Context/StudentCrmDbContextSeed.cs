@@ -37,8 +37,6 @@ namespace StudentCrm.Persistence.Context
                     UserName = adminUserName,
                     Email = adminEmail,
                     EmailConfirmed = true,
-                    Name = "System",
-                    Surname = "Admin"
                 };
 
                 var createResult = await userManager.CreateAsync(adminUser, adminPassword);

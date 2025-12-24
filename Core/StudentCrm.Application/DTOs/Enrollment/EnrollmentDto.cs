@@ -11,8 +11,9 @@ namespace StudentCrm.Application.DTOs.Enrollment
 {
     public class EnrollmentDto
     {
+        public string Id { get; set; }
         public StudentDto Student { get; set; } = null!;
-        public SectionDto Section { get; set; } = null!;
+        public SectionShortDto Section { get; set; } = null!;
 
         public decimal? TotalGrade { get; set; }  // 0-100
         public string? LetterGrade { get; set; }  // A,B,C...

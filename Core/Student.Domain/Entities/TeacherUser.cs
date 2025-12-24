@@ -12,7 +12,7 @@ namespace Student.Domain.Entities
         public Guid AppUserId { get; set; }       // müəllim mütləq login olur adətən
         public AppUser AppUser { get; set; } = null!;
 
-        public ICollection<Section> Sections { get; set; } = new List<Section>();
+        public ICollection<Section>? Sections { get; set; } = new List<Section>();
 
     }
 }

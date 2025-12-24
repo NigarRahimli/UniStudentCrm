@@ -16,6 +16,6 @@ namespace StudentCrm.Application.DTOs.Teacher
 
         public string AppUserId { get; set; }
 
-        public List<SectionDto>? Sections { get; set; }
+        public List<SectionShortDto>? Sections { get; set; }
     }
 }

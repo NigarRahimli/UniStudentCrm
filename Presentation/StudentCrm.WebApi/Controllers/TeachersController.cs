@@ -6,7 +6,7 @@ using StudentCrm.Application.GlobalAppException;
 
 namespace StudentCrm.WebApi.Controllers
 {
-    [Route("api/teachers")]
+    [Route("api/[controller]")]
     [ApiController]
     public class TeachersController : ControllerBase
     {
@@ -88,7 +88,7 @@ namespace StudentCrm.WebApi.Controllers
 
         // PUT api/teachers/{id}
         [Authorize(Roles = "Admin")]
-        [HttpPut("{id}")]
+        [HttpPut]
         public async Task<IActionResult> Update( [FromBody] UpdateTeacherDto dto)
         {
             if (!ModelState.IsValid)

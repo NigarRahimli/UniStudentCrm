@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using StudentCrm.Application.Abstract.Services;
 using StudentCrm.Application.DTOs.Account;
@@ -7,6 +8,7 @@ using StudentCrm.Application.GlobalAppException;
 namespace StudentCrm.WebApi.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     [ApiController]
     public class AdminsController : ControllerBase
     {

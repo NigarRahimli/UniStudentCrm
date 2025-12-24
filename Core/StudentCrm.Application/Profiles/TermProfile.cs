@@ -22,8 +22,9 @@ namespace StudentCrm.Application.Profiles
             CreateMap<Term, TermDto>()
                 .ForMember(d => d.Sections, opt => opt.MapFrom(s => s.Sections));
 
-    
-          
+            CreateMap<Term, TermShortDto>()
+                        .ForMember(d => d.Id, opt => opt.MapFrom(s => s.Id.ToString()));
+
         }
     }
 }

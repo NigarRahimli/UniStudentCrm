@@ -19,7 +19,8 @@ namespace StudentCrm.Application.Profiles
                     (src, dest, srcMember) => srcMember != null));
 
             CreateMap<Course, CourseDto>();
-            CreateMap<Section, SectionDto>();
+            CreateMap<Course, CourseShortDto>();
+           
         }
     }
 

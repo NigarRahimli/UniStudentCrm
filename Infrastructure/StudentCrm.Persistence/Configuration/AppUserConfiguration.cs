@@ -13,8 +13,7 @@ namespace StudentCrm.Persistence.Configuration
     {
         public void Configure(EntityTypeBuilder<AppUser> builder)
         {
-            builder.Property(x => x.Name).HasMaxLength(100);
-            builder.Property(x => x.Surname).HasMaxLength(100);
+            
         }
     }
 }

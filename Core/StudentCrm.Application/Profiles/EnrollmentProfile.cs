@@ -26,6 +26,9 @@ namespace StudentCrm.Application.
             CreateMap<Enrollment, EnrollmentDto>()
                 .ForMember(d => d.Student, o => o.MapFrom(s => s.Student))
                 .ForMember(d => d.Section, o => o.MapFrom(s => s.Section));
+            CreateMap<Enrollment, EnrollmentShortDto>()
+                .ForMember(d => d.Student, o => o.MapFrom(s => s.Student));
+                
         }
     }
 }

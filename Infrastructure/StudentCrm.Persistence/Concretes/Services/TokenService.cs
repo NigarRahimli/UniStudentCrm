@@ -28,8 +28,6 @@ namespace StudentCrm.Persistence.Concretes.Services
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),   // ✅ Guid -> string
-                new Claim(ClaimTypes.GivenName, user.Name ?? ""),
-                new Claim(ClaimTypes.Surname, user.Surname ?? ""),
                 new Claim(ClaimTypes.Email, user.Email ?? ""),
                 new Claim(ClaimTypes.Role, role)
             };
@@ -54,7 +52,8 @@ namespace StudentCrm.Persistence.Concretes.Services
             {
                 Token = token,
                 ExpireDate = securityToken.ValidTo,
-                Role = role
+                Role = role,
+                MustChangePassword = user.MustChangePassword
             };
         }
     }

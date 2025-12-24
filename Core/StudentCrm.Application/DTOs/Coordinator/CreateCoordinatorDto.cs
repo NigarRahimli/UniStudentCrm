@@ -14,7 +14,6 @@ namespace StudentCrm.Application.DTOs.Coordinator
 
         // login üçün (AppUser yaratmaq üçün)
         public string Email { get; set; } = null!;
-        public string Password { get; set; } = null!;
        
     }
 }

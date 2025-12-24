@@ -14,6 +14,6 @@ namespace StudentCrm.Application.DTOs.Term
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
 
-        public List<SectionDto> Sections { get; set; }
+        public List<SectionShortDto> Sections { get; set; }
     }
 }

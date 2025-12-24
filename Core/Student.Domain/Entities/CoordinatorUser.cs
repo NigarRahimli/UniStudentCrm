@@ -12,7 +12,7 @@ namespace Student.Domain.Entities
         public string FullName { get; set; } = null!;
         public string? Department { get; set; }
         public int CoordinatorNo { get; set; }
-
+        public string? Phone { get; set; }
         public Guid AppUserId { get; set; }       // coordinator login olur
         public AppUser AppUser { get; set; } = null!;
     }

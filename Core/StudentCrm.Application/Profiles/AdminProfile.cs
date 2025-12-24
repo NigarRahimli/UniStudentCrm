@@ -16,9 +16,8 @@ namespace StudentCrm.Application.Profiles
             // RegisterDto -> Admin
             CreateMap<RegisterDto, AppUser>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email)) // Kullanıcı adı e-posta olsun
-                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
-                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                .ForMember(dest => dest.Surname, opt => opt.MapFrom(src => src.Surname));
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email));
+
             // ID Identity tarafından atanır
 
             // LoginDto -> Admin (Sadece mapleme için, Identity doğrulaması için kullanılmaz)

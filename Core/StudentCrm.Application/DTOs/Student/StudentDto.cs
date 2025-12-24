@@ -7,7 +7,10 @@
         public string Name { get; set; } = null!;
         public string Surname { get; set; } = null!;
         public string? Phone { get; set; }
+
+
+        public Guid AppUserId { get; set; }
         public string? Email { get; set; }
-        public bool HasLogin { get; set; }  // true if AppUserId is set
+
     }
 }

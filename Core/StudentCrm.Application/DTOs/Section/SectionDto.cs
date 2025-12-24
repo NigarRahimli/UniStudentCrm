@@ -16,12 +16,12 @@ namespace StudentCrm.Application.DTOs.Section
         public string Id { get; set; }
         public string SectionCode { get; set; }// A, B, 01...
 
-        public CourseDto Course { get; set; }
+        public CourseShortDto Course { get; set; }
 
-        public TermDto Term { get; set; }
+        public TermShortDto Term { get; set; }
 
-        public TeacherDto? Teacher { get; set; }
+        public TeacherShortDto? Teacher { get; set; }
 
-        public List<EnrollmentDto>? Enrollments { get; set; }
+        public List<EnrollmentShortDto>? Enrollments { get; set; }
     }
 }
