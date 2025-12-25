@@ -40,7 +40,7 @@ namespace StudentCrm.WebApi.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById([FromBody] string id)
+        public async Task<IActionResult> GetById(string id)
         {
             try
             {
@@ -109,7 +109,7 @@ namespace StudentCrm.WebApi.Controllers
 
         [Authorize(Roles = "Admin,Coordinator")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete([FromBody] string id)
+        public async Task<IActionResult> Delete( string id)
         {
             try
             {

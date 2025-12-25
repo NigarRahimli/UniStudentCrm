@@ -8,7 +8,7 @@ using StudentCrm.Application.GlobalAppException;
 namespace StudentCrm.WebApi.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+
     [ApiController]
     public class AdminsController : ControllerBase
     {

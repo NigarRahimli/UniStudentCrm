@@ -2,9 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 using Student.Domain.Entities;
 using StudentCrm.Application.Abstract.Repositories.Courses;
-using StudentCrm.Application.Abstract.Repositories.Sections;
 using StudentCrm.Application.Abstract.Services;
 using StudentCrm.Application.DTOs.Course;
+using StudentCrm.Application.DTOs.Section;
 using StudentCrm.Application.GlobalAppException;
 using System;
 using System.Collections.Generic;
@@ -17,21 +17,18 @@ namespace StudentCrm.Persistence.Concretes.Services
     {
         private readonly ICourseReadRepository _courseReadRepo;
         private readonly ICourseWriteRepository _courseWriteRepo;
-        private readonly ISectionReadRepository _sectionReadRepo;
-        private readonly ISectionWriteRepository _sectionWriteRepo;
+        private readonly ISectionService _sectionService;
         private readonly IMapper _mapper;
 
         public CourseService(
             ICourseReadRepository courseReadRepo,
             ICourseWriteRepository courseWriteRepo,
-            ISectionReadRepository sectionReadRepo,
-            ISectionWriteRepository sectionWriteRepo,
+            ISectionService sectionService,
             IMapper mapper)
         {
             _courseReadRepo = courseReadRepo;
             _courseWriteRepo = courseWriteRepo;
-            _sectionReadRepo = sectionReadRepo;
-            _sectionWriteRepo = sectionWriteRepo;
+            _sectionService = sectionService;
             _mapper = mapper;
         }
 
@@ -39,7 +36,11 @@ namespace StudentCrm.Persistence.Concretes.Services
         {
             var courses = await _courseReadRepo.GetAllAsync(
                 c => !EF.Property<bool>(c, "IsDeleted"),
-                include: q => q.Include(c => c.Sections),
+                include: q => q
+                    .Include(c => c.Sections)
+                        .ThenInclude(s => s.Term)
+                    .Include(c => c.Sections)
+                        .ThenInclude(s => s.Teacher),
                 enableTracking: false
             );
 
@@ -53,7 +54,11 @@ namespace StudentCrm.Persistence.Concretes.Services
 
             var course = await _courseReadRepo.GetAsync(
                 c => c.Id == courseId && !EF.Property<bool>(c, "IsDeleted"),
-                include: q => q.Include(c => c.Sections),
+                include: q => q
+                    .Include(c => c.Sections)
+                        .ThenInclude(s => s.Term)
+                    .Include(c => c.Sections)
+                        .ThenInclude(s => s.Teacher),
                 enableTracking: false
             );
 
@@ -76,14 +81,14 @@ namespace StudentCrm.Persistence.Concretes.Services
 
             var code = dto.Code.Trim();
 
-            // Unique code
-            var existing = await _courseReadRepo.GetAsync(
+            // yalnız aktivlər arasında yoxla (filtered unique index ilə uyğun)
+            var existsActive = await _courseReadRepo.GetAsync(
                 c => c.Code == code && !EF.Property<bool>(c, "IsDeleted"),
                 enableTracking: false
             );
 
-            if (existing != null)
-                throw new GlobalAppException("A course with this code already exists!");
+            if (existsActive != null)
+                throw new GlobalAppException("Bu Code ilə course artıq mövcuddur!");
 
             var course = new Course
             {
@@ -93,7 +98,17 @@ namespace StudentCrm.Persistence.Concretes.Services
             };
 
             await _courseWriteRepo.AddAsync(course);
-            await _courseWriteRepo.CommitAsync();
+
+            try
+            {
+                await _courseWriteRepo.CommitAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException != null &&
+                                              ex.InnerException.Message.Contains("IX_Courses_Code"))
+            {
+                // race condition / DB unique constraint
+                throw new GlobalAppException("Bu Code ilə course artıq mövcuddur!");
+            }
         }
 
         public async Task UpdateAsync(UpdateCourseDto dto)
@@ -120,16 +135,16 @@ namespace StudentCrm.Persistence.Concretes.Services
 
                 if (!string.Equals(course.Code, newCode, StringComparison.OrdinalIgnoreCase))
                 {
-                    var another = await _courseReadRepo.GetAsync(
+                    var anotherActive = await _courseReadRepo.GetAsync(
                         c => c.Code == newCode && c.Id != courseId && !EF.Property<bool>(c, "IsDeleted"),
                         enableTracking: false
                     );
 
-                    if (another != null)
-                        throw new GlobalAppException("Another course with this code already exists!");
-                }
+                    if (anotherActive != null)
+                        throw new GlobalAppException("Bu Code ilə başqa course artıq mövcuddur!");
 
-                course.Code = newCode;
+                    course.Code = newCode;
+                }
             }
 
             // Title
@@ -140,44 +155,40 @@ namespace StudentCrm.Persistence.Concretes.Services
             if (dto.Credit.HasValue)
                 course.Credit = dto.Credit.Value;
 
-            // Sections linking (dto.SectionIds is List<string>?)
+            // ✅ Sections linking via SectionService ONLY
+            // NOTE: Unlink yoxdur, çünki CourseId nullable deyil və Guid.Empty FK error yaradır.
             if (dto.SectionIds != null)
             {
-                // 1) Unlink sections not in dto list
-                foreach (var sec in course.Sections.ToList())
+                var sectionIds = dto.SectionIds
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Select(x => x.Trim())
+                    .Distinct()
+                    .ToList();
+
+                foreach (var secId in sectionIds)
                 {
-                    if (!dto.SectionIds.Contains(sec.Id.ToString()))
+                    // validate + link
+                    await _sectionService.GetByIdAsync(secId);
+
+                    await _sectionService.UpdateAsync(new UpdateSectionDto
                     {
-                        // better than Guid.Empty: make nullable in entity if you can
-                        sec.CourseId = Guid.Empty;
-                        await _sectionWriteRepo.UpdateAsync(sec);
-                    }
-                }
-
-                // 2) Link new sections
-                foreach (var secIdStr in dto.SectionIds)
-                {
-                    if (!Guid.TryParse(secIdStr, out var secId))
-                        throw new GlobalAppException($"Invalid Section ID: {secIdStr}");
-
-                    if (!course.Sections.Any(s => s.Id == secId))
-                    {
-                        var section = await _sectionReadRepo.GetAsync(
-                            s => s.Id == secId && !EF.Property<bool>(s, "IsDeleted"),
-                            enableTracking: true
-                        );
-
-                        if (section == null)
-                            throw new GlobalAppException($"Section with ID {secIdStr} not found!");
-
-                        section.CourseId = course.Id;
-                        await _sectionWriteRepo.UpdateAsync(section);
-                    }
+                        Id = secId,
+                        CourseId = course.Id.ToString()
+                    });
                 }
             }
 
             await _courseWriteRepo.UpdateAsync(course);
-            await _courseWriteRepo.CommitAsync();
+
+            try
+            {
+                await _courseWriteRepo.CommitAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException != null &&
+                                              ex.InnerException.Message.Contains("IX_Courses_Code"))
+            {
+                throw new GlobalAppException("Bu Code ilə course artıq mövcuddur!");
+            }
         }
 
         public async Task DeleteAsync(string id)
@@ -193,26 +204,7 @@ namespace StudentCrm.Persistence.Concretes.Services
             if (course == null)
                 throw new GlobalAppException("Course not found!");
 
-            // unlink sections
-            var sections = await _sectionReadRepo.GetAllAsync(
-                s => s.CourseId == courseId && !EF.Property<bool>(s, "IsDeleted"),
-                enableTracking: true
-            );
-
-            foreach (var sec in sections)
-            {
-                sec.CourseId = Guid.Empty;
-                await _sectionWriteRepo.UpdateAsync(sec);
-            }
-
-            // choose ONE delete style:
-
-            // Hard delete:
-            // await _courseWriteRepo.HardDeleteAsync(course);
-
-            // Soft delete (recommended if you use IsDeleted everywhere):
             await _courseWriteRepo.SoftDeleteAsync(course);
-
             await _courseWriteRepo.CommitAsync();
         }
     }

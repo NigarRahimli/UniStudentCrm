@@ -15,7 +15,7 @@ namespace StudentCrm.Persistence.Configuration
             builder.Property(x => x.Title).IsRequired().HasMaxLength(200);
             builder.Property(x => x.Credit).IsRequired();
 
-            builder.HasIndex(x => x.Code).IsUnique();
+            builder.HasIndex(x => x.Code).IsUnique().HasFilter("[IsDeleted] = 0"); 
         }
     }
 }

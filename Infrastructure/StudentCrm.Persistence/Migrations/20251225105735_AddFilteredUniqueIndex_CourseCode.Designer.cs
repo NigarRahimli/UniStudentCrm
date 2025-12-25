@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StudentCrm.Persistence.Context;
 
@@ -11,9 +12,11 @@ using StudentCrm.Persistence.Context;
 namespace StudentCrm.Persistence.Migrations
 {
     [DbContext(typeof(StudentCrmDbContext))]
-    partial class StudentCrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251225105735_AddFilteredUniqueIndex_CourseCode")]
+    partial class AddFilteredUniqueIndex_CourseCode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

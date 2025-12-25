@@ -50,7 +50,7 @@ namespace StudentCrm.Persistence.Concretes.Services
                     .Include(s => s.Teacher)
                     .Include(s => s.Enrollments)
                         .ThenInclude(e => e.Student)
-                        .ThenInclude(s => s.AppUser),
+                        .ThenInclude(st => st.AppUser),
                 enableTracking: false
             );
 
@@ -96,7 +96,6 @@ namespace StudentCrm.Persistence.Concretes.Services
             if (string.IsNullOrWhiteSpace(dto.TeacherId) || !Guid.TryParse(dto.TeacherId, out var teacherId))
                 throw new GlobalAppException("Invalid Teacher ID!");
 
-            // Check related exists (and not deleted)
             var course = await _courseReadRepo.GetAsync(c => c.Id == courseId && !EF.Property<bool>(c, "IsDeleted"));
             if (course == null)
                 throw new GlobalAppException("Course not found!");
@@ -111,7 +110,6 @@ namespace StudentCrm.Persistence.Concretes.Services
 
             var code = dto.SectionCode.Trim();
 
-            // Prevent duplicate SectionCode in same course & term
             var dup = await _sectionReadRepo.GetAsync(s =>
                 s.SectionCode == code &&
                 s.CourseId == courseId &&
@@ -149,13 +147,12 @@ namespace StudentCrm.Persistence.Concretes.Services
             if (section == null)
                 throw new GlobalAppException("Section not found!");
 
-            // keep old values (optional, but matches your partial update style)
             var oldCourseId = section.CourseId;
             var oldTermId = section.TermId;
             var oldTeacherId = section.TeacherId;
             var oldCode = section.SectionCode;
 
-            // SectionCode (optional)
+            // SectionCode
             if (dto.SectionCode != null)
                 section.SectionCode = string.IsNullOrWhiteSpace(dto.SectionCode) ? oldCode : dto.SectionCode.Trim();
             else
@@ -164,8 +161,12 @@ namespace StudentCrm.Persistence.Concretes.Services
             // Course (optional)
             if (dto.CourseId != null)
             {
-                if (string.IsNullOrWhiteSpace(dto.CourseId) || !Guid.TryParse(dto.CourseId, out var courseId))
+                if (!Guid.TryParse(dto.CourseId, out var courseId))
                     throw new GlobalAppException("Invalid Course ID!");
+
+                // ❌ Guid.Empty FK-i qırır
+                if (courseId == Guid.Empty)
+                    throw new GlobalAppException("CourseId boş (Guid.Empty) ola bilməz. Unlink üçün CourseId-ni nullable etməlisiniz.");
 
                 var course = await _courseReadRepo.GetAsync(c => c.Id == courseId && !EF.Property<bool>(c, "IsDeleted"));
                 if (course == null)
@@ -212,7 +213,7 @@ namespace StudentCrm.Persistence.Concretes.Services
                 section.TeacherId = oldTeacherId;
             }
 
-            // If SectionCode/CourseId/TermId changed, re-check duplicate rule
+            // duplicate check
             var dup = await _sectionReadRepo.GetAsync(s =>
                 s.Id != sectionId &&
                 s.SectionCode == section.SectionCode &&
@@ -240,14 +241,7 @@ namespace StudentCrm.Persistence.Concretes.Services
             if (section == null)
                 throw new GlobalAppException("Section not found!");
 
-            // Choose ONE delete style:
-
-            // Hard delete:
-            // await _sectionWriteRepo.HardDeleteAsync(section);
-
-            // Soft delete (recommended):
             await _sectionWriteRepo.SoftDeleteAsync(section);
-
             await _sectionWriteRepo.CommitAsync();
         }
     }
